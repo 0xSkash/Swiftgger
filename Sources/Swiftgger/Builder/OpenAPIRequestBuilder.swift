@@ -8,7 +8,6 @@ import Foundation
 
 /// Builder for requests information stored in `paths` part of OpenAPI.
 class OpenAPIRequestBuilder {
-
     let request: APIRequest?
     let objects: [APIObjectProtocol]
 
@@ -18,12 +17,18 @@ class OpenAPIRequestBuilder {
     }
 
     func built() -> OpenAPIRequestBody? {
-
         guard let apiRequest = request, let apiRequestType = apiRequest.type else {
             return nil
         }
 
-        let contentType = apiRequest.contentType ?? "application/json"
+        let contentType: String
+
+        switch apiRequestType {
+        case .formdata:
+            contentType = Constants.ContentType.formDataContentType
+        default:
+            contentType = apiRequest.contentType ?? "application/json"
+        }
 
         let openAPIMediaTypeBuilder = OpenAPIMediaTypeBuilder(objects: objects, for: apiRequestType)
         let mediaType = openAPIMediaTypeBuilder.built()

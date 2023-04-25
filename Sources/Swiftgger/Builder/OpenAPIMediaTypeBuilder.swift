@@ -4,8 +4,8 @@
 //  Licensed under the MIT License.
 //
 
-import Foundation
 import AnyCodable
+import Foundation
 
 /// Builder of `paths` part of OpenAPI.
 class OpenAPIMediaTypeBuilder {
@@ -19,44 +19,46 @@ class OpenAPIMediaTypeBuilder {
 
     func built() -> OpenAPIMediaType {
         var openAPISchema: OpenAPISchema?
-        
+
         switch type {
-        case .dictionary(let type):
+        case let .dictionary(type):
             if let dataType = APIDataType(fromSwiftType: type) {
                 let additionalProperties = OpenAPISchema(type: dataType.type, format: dataType.format)
                 openAPISchema = OpenAPISchema(type: "object", additionalProperties: additionalProperties)
             } else {
-                let objectTypeReference = self.createObjectReference(for: type)
+                let objectTypeReference = createObjectReference(for: type)
                 let additionalProperties = OpenAPISchema(ref: objectTypeReference)
                 openAPISchema = OpenAPISchema(type: "object", additionalProperties: additionalProperties)
             }
 
-            break
-        case .object(let type, let isCollection):
-            let objectTypeReference = self.createObjectReference(for: type)
-            
+        case let .object(type, isCollection):
+            let objectTypeReference = createObjectReference(for: type)
+
             if isCollection {
                 let objectInArraySchema = OpenAPISchema(ref: objectTypeReference)
                 openAPISchema = OpenAPISchema(type: APIDataType.array.type, items: objectInArraySchema)
             } else {
                 openAPISchema = OpenAPISchema(ref: objectTypeReference)
             }
-            
-            break
-        case .value(let value):
+
+        case let .value(value):
             let example = AnyCodable(value)
 
-            if let items = value as? Array<Any>, let first = items.first {
+            if let items = value as? [Any], let first = items.first {
                 let dataType = APIDataType(fromSwiftValue: first)
-                
+
                 let objectInArraySchema = OpenAPISchema(type: dataType?.type, format: dataType?.format)
                 openAPISchema = OpenAPISchema(type: APIDataType.array.type, items: objectInArraySchema, example: example)
             } else {
                 let dataType = APIDataType(fromSwiftValue: value)
                 openAPISchema = OpenAPISchema(type: dataType?.type, format: dataType?.format, example: example)
             }
-            
-            break
+
+        case let .formdata(name):
+            openAPISchema = OpenAPISchema(
+                type: "object",
+                properties: [name: OpenAPISchema(type: "string", format: "binary")]
+            )
         }
 
         let openAPIMediaType = OpenAPIMediaType(schema: openAPISchema)
